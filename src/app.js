@@ -86,6 +86,7 @@ app.use(
 );
 
 app.get("/", (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
   const html = `<!DOCTYPE html>
 <html lang="es">
   <head>
@@ -102,6 +103,9 @@ app.get("/", (req, res) => {
         --line: #d9e2f0;
         --accent: #0f766e;
         --badge: #e6fffb;
+        --accent-strong: #115e59;
+        --code-bg: #0f172a;
+        --code-text: #e2e8f0;
       }
       * {
         box-sizing: border-box;
@@ -113,7 +117,7 @@ app.get("/", (req, res) => {
         color: var(--text);
       }
       main {
-        max-width: 920px;
+        max-width: 1120px;
         margin: 0 auto;
         padding: 40px 20px 64px;
       }
@@ -137,6 +141,9 @@ app.get("/", (req, res) => {
         color: var(--muted);
         line-height: 1.5;
       }
+      .hero strong {
+        color: var(--accent-strong);
+      }
       .meta {
         display: flex;
         gap: 10px;
@@ -158,12 +165,20 @@ app.get("/", (req, res) => {
         gap: 16px;
         grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       }
+      .wide {
+        grid-column: 1 / -1;
+      }
       .panel {
         padding: 20px;
       }
       .panel h2 {
         margin: 0 0 14px;
         font-size: 1.1rem;
+      }
+      .panel p {
+        margin: 0 0 14px;
+        color: var(--muted);
+        line-height: 1.5;
       }
       ul {
         list-style: none;
@@ -179,11 +194,45 @@ app.get("/", (req, res) => {
         border: 1px solid #e4e9f2;
         border-radius: 8px;
         padding: 2px 6px;
+        word-break: break-word;
       }
       .method {
         font-weight: 700;
         color: var(--accent);
         margin-right: 6px;
+      }
+      pre {
+        margin: 0;
+        padding: 14px 16px;
+        border-radius: 14px;
+        background: var(--code-bg);
+        color: var(--code-text);
+        overflow-x: auto;
+        border: 1px solid #1e293b;
+      }
+      pre code {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        color: inherit;
+      }
+      .steps {
+        display: grid;
+        gap: 12px;
+      }
+      .step {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fbfdff;
+      }
+      .step strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+      .hint {
+        font-size: 0.95rem;
+        color: var(--muted);
       }
     </style>
   </head>
@@ -191,19 +240,40 @@ app.get("/", (req, res) => {
     <main>
       <section class="hero">
         <h1>IoT Water Backend</h1>
-        <p>Backend activo. Este puerto expone la API y no la interfaz visual.</p>
+        <p>Backend activo. Este servicio expone la API y esta listo para pruebas desde navegador, <strong>curl</strong>, Postman o Insomnia.</p>
         <div class="meta">
           <span class="badge">Modo: ${isProduction ? "production" : "development"}</span>
           <span class="badge">Frontend servido: ${shouldServeFrontend ? "si" : "no"}</span>
+          <span class="badge">Base URL: ${baseUrl}</span>
         </div>
       </section>
 
       <section class="grid">
         <article class="panel">
-          <h2>Estado</h2>
+          <h2>Prueba Rapida</h2>
           <ul>
             <li><span class="method">GET</span><code>/api/health</code></li>
+            <li><span class="method">GET</span><code>/api/readings/latest</code></li>
+            <li><span class="method">GET</span><code>/api/public/dashboard</code></li>
           </ul>
+        </article>
+
+        <article class="panel">
+          <h2>Como Probar</h2>
+          <div class="steps">
+            <div class="step">
+              <strong>1. Verifica que el backend responde</strong>
+              <span class="hint">Abre <code>${baseUrl}/api/health</code> en el navegador.</span>
+            </div>
+            <div class="step">
+              <strong>2. Prueba autenticacion</strong>
+              <span class="hint">Usa <code>POST /api/auth/register</code> y luego <code>POST /api/auth/login</code>.</span>
+            </div>
+            <div class="step">
+              <strong>3. Simula una lectura del dispositivo</strong>
+              <span class="hint">Enviala a <code>POST /api/readings</code> con el header <code>x-device-key</code>.</span>
+            </div>
+          </div>
         </article>
 
         <article class="panel">
@@ -255,6 +325,42 @@ app.get("/", (req, res) => {
           <ul>
             <li><span class="method">GET</span><code>/api/public/dashboard</code></li>
             <li><span class="method">GET</span><code>/api/public/dashboard/stream</code></li>
+          </ul>
+        </article>
+
+        <article class="panel wide">
+          <h2>Pruebas Con curl</h2>
+          <p>Reemplaza los valores de ejemplo por los tuyos si hace falta. La URL ya queda armada con este despliegue.</p>
+<pre><code>curl ${baseUrl}/api/health</code></pre>
+        </article>
+
+        <article class="panel wide">
+          <h2>Registro y Login</h2>
+<pre><code>curl -X POST ${baseUrl}/api/auth/register \\
+  -H "Content-Type: application/json" \\
+  -d '{"name":"Duvan","email":"duvan@test.com","password":"123456"}'
+
+curl -X POST ${baseUrl}/api/auth/login \\
+  -H "Content-Type: application/json" \\
+  -d '{"email":"duvan@test.com","password":"123456"}'</code></pre>
+        </article>
+
+        <article class="panel wide">
+          <h2>Lectura Del Dispositivo</h2>
+<pre><code>curl -X POST ${baseUrl}/api/readings \\
+  -H "Content-Type: application/json" \\
+  -H "x-device-key: TU_INGEST_API_KEY" \\
+  -d '{"deviceName":"ESP32-WOKWI-01","flow_lmin":1.8,"pressure_kpa":100.4,"risk":62,"state":"ALERTA"}'
+
+curl ${baseUrl}/api/readings/latest</code></pre>
+        </article>
+
+        <article class="panel wide">
+          <h2>Notas</h2>
+          <ul>
+            <li>Si <code>/api/health</code> responde <code>{"ok":true}</code>, el backend esta arriba.</li>
+            <li>Si falla <code>/api/readings</code>, revisa que <code>x-device-key</code> coincida con <code>INGEST_API_KEY</code>.</li>
+            <li>Si falla login o registro, revisa los logs del deploy y la conexion a MySQL.</li>
           </ul>
         </article>
       </section>
